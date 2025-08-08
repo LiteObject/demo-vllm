@@ -13,7 +13,7 @@ try:
     from vllm import LLM as _LLM, SamplingParams as _SamplingParams  # type: ignore
     USE_VLLM = True
     print("Using vLLM for fast inference.")
-except Exception:
+except (ImportError, RuntimeError):
     USE_VLLM = False
     print("vLLM not available; falling back to Transformers on CPU.")
 
@@ -34,7 +34,7 @@ def _render_prompt(model_name: str, prompt: str) -> str:
                 {"role": "user", "content": prompt},
             ]
             return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    except Exception:
+    except (ImportError, OSError, ValueError, AttributeError):
         pass
     # Fallback to a generic instruction-style prompt
     return f"You are a helpful assistant.\n\nUser: {prompt}\nAssistant:"

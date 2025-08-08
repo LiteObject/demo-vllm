@@ -63,7 +63,7 @@ You have three practical paths:
   try:
       from vllm import LLM, SamplingParams
       USE_VLLM = True
-  except Exception:
+  except (ImportError, RuntimeError):
       USE_VLLM = False
 
   def demo(model_name: str, prompt: str = "Hello world", max_tokens: int = 50):

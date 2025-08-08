@@ -9,7 +9,7 @@ docker build -t $Image .
 
 # Run with GPU and mount a persistent HF cache
 docker run --gpus all --rm `
-  -v ${PWD}.Path:/app `
-  -v ${CacheVolume}:/root/.cache/huggingface `
+  -v "${PWD}:/app" `
+  -v "${CacheVolume}:/root/.cache/huggingface" `
   -w /app `
   $Image
