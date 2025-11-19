@@ -6,6 +6,18 @@ The script loads a Hugging Face text generation model via vLLM and prints a shor
 
 vLLM is an open-source, high-performance inference engine for large language models. It achieves high throughput and low latency with techniques like PagedAttention (efficient KV-cache management), continuous batching, tensor parallelism, and IO-aware scheduling. vLLM supports many Hugging Face models, offers a simple Python API and an OpenAI-compatible HTTP server, and is optimized for GPU execution.
 
+## What is Transformers?
+
+Transformers (the Hugging Face `transformers` library) is a popular Python
+library for loading, running, and fine-tuning modern Transformer-based models
+from the Hugging Face Hub. It provides high-level APIs like
+`AutoModelForCausalLM`, `AutoTokenizer`, and `pipeline` for text generation.
+
+In this demo, Transformers is only used as a **CPU fallback** when vLLM is not
+available (for example on native Windows). The same model ID can usually be
+run through either vLLM (fast GPU inference) or Transformers (portable but
+slower CPU inference).
+
 ## Windows limitation (important)
 
 vLLM does not natively support Windows. Running `app.py` on Windows typically fails with:
