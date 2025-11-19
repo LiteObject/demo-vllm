@@ -10,12 +10,26 @@ parameters for broad compatibility and more meaningful outputs.
 # Try to use vLLM if available; otherwise fall back to Transformers on CPU.
 try:
     # Ensure real availability by importing LLM entrypoints (fails on Windows without vllm._C)
-    from vllm import LLM as _LLM, SamplingParams as _SamplingParams  # type: ignore
+    from vllm import LLM, SamplingParams  # type: ignore
+
     USE_VLLM = True
     print("Using vLLM for fast inference.")
 except (ImportError, RuntimeError):
+    LLM = None  # type: ignore
+    SamplingParams = None  # type: ignore
     USE_VLLM = False
     print("vLLM not available; falling back to Transformers on CPU.")
+
+try:
+    from transformers import (
+        AutoModelForCausalLM,
+        AutoTokenizer,
+        pipeline,
+    )
+except ImportError:
+    AutoModelForCausalLM = None  # type: ignore
+    AutoTokenizer = None  # type: ignore
+    pipeline = None  # type: ignore
 
 
 def _render_prompt(model_name: str, prompt: str) -> str:
@@ -25,15 +39,29 @@ def _render_prompt(model_name: str, prompt: str) -> str:
     is available or if anything fails during tokenizer loading.
     """
     try:
-        # local import to avoid hard dep at import time
-        from transformers import AutoTokenizer
+        if AutoTokenizer is None:
+            raise ImportError("Transformers AutoTokenizer unavailable")
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        if hasattr(tokenizer, "apply_chat_template") and getattr(tokenizer, "chat_template", None):
+        if hasattr(tokenizer, "apply_chat_template") and getattr(
+            tokenizer,
+            "chat_template",
+            None,
+        ):
             messages = [
-                {"role": "system", "content": "You are a helpful assistant. Provide a concise, helpful answer."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful assistant. Provide a concise, helpful "
+                        "answer."
+                    ),
+                },
                 {"role": "user", "content": prompt},
             ]
-            return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            return tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
     except (ImportError, OSError, ValueError, AttributeError):
         pass
     # Fallback to a generic instruction-style prompt
@@ -70,9 +98,7 @@ def demo(model_name: str, prompt: str = "Hello world", max_tokens: int = 128):
     """
     rendered = _render_prompt(model_name, prompt)
 
-    if USE_VLLM:
-        # Import here to avoid possibly-unbound names when vLLM is unavailable
-        from vllm import LLM, SamplingParams  # type: ignore
+    if USE_VLLM and LLM is not None and SamplingParams is not None:
         llm = LLM(model=model_name)
 
         sampling_params = SamplingParams(
@@ -85,7 +111,11 @@ def demo(model_name: str, prompt: str = "Hello world", max_tokens: int = 128):
         text = outputs[0].outputs[0].text
     else:
         # Transformers CPU fallback
-        from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+        if AutoTokenizer is None or AutoModelForCausalLM is None or pipeline is None:
+            raise RuntimeError(
+                "Transformers is required for CPU fallback. Install it via"
+                " `pip install transformers`."
+            )
 
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForCausalLM.from_pretrained(model_name)
