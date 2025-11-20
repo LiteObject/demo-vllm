@@ -127,6 +127,30 @@ Notes:
 - The named volume persists downloaded model weights between runs.
 - Ensure Docker Desktop is in Linux containers mode and GPU support is enabled.
 
+## Testing the API (server mode)
+
+Once you've started the server with `run-server.ps1`, test the OpenAI-compatible endpoints:
+
+```bash
+# Chat completions
+curl -X POST http://localhost:8001/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "microsoft/Phi-3-mini-4k-instruct",
+    "messages": [{"role": "user", "content": "What is vLLM?"}],
+    "max_tokens": 100,
+    "temperature": 0.7
+  }'
+
+# Health check
+curl http://localhost:8001/health
+
+# List models
+curl http://localhost:8001/v1/models
+```
+
+Replace `8001` with your chosen port if different.
+
 ## Quick start (Linux/WSL2)
 
 ```bash
