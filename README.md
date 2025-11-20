@@ -60,11 +60,18 @@ You have three practical paths:
   ```powershell
   docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
   ```
-- Run the vLLM OpenAI-compatible server (quick start):
-  ```powershell
-  .\scripts\run-server.ps1 -Model microsoft/Phi-3-mini-4k-instruct -Port 8000 -CacheVolume model-cache
+- Run the vLLM OpenAI-compatible server using docker-compose:
+  ```bash
+  # Start server (uses settings from .env file)
+  docker-compose up
+  
+  # Or run in background
+  docker-compose up -d
+  
+  # Stop server
+  docker-compose down
   ```
-- Or build and run this repo’s `app.py` inside a GPU-enabled container:
+- Or build and run this repo's `app.py` inside a GPU-enabled container:
   ```powershell
   .\scripts\run-app.ps1 -Image demo-vllm -CacheVolume model-cache
   ```
@@ -93,43 +100,59 @@ You have three practical paths:
   ```
 - For CPU, use a small model, e.g., `TinyLlama/TinyLlama-1.1B-Chat-v1.0`. Larger models will be very slow or may OOM on CPU.
 
-## Docker scripts (Windows PowerShell)
+## Running vLLM Server with Docker Compose
 
-Two helper scripts are provided in `scripts/` to simplify GPU-enabled runs with Docker:
+The easiest way to run the vLLM server is with `docker-compose.yml`.
 
-- `scripts/run-server.ps1`
-  - Starts the vLLM OpenAI-compatible HTTP server in a container.
-  - Parameters:
-    - `-Model` (string, default `"microsoft/Phi-3-mini-4k-instruct"`): HF model ID.
-    - `-Port` (int, default `8000`): Host port to map to container port 8000.
-    - `-CacheVolume` (string, default `"model-cache"`): Named Docker volume for HF cache at `/root/.cache/huggingface` inside the container.
-  - Example:
-    ```powershell
-    .\scripts\run-server.ps1 -Model microsoft/Phi-3-mini-4k-instruct -Port 8000 -CacheVolume model-cache
-    ```
-  - After it’s up, call `http://localhost:8000` with an OpenAI-compatible client.
+### Configuration
 
-- `scripts/run-app.ps1`
-  - Builds the Docker image from the included `Dockerfile` and runs `app.py` inside a GPU-enabled container.
-  - Parameters:
-    - `-Image` (string, default `"demo-vllm"`): Name to tag the built image.
-    - `-CacheVolume` (string, default `"model-cache"`): Named Docker volume for HF cache.
-  - Example:
-    ```powershell
-    .\scripts\run-app.ps1 -Image demo-vllm -CacheVolume model-cache
-    ```
+Edit `.env` file to customize settings:
+
+```env
+MODEL=microsoft/Phi-3-mini-4k-instruct
+PORT=8001
+```
+
+### Commands
+
+```bash
+# Start server (foreground)
+docker-compose up
+
+# Start server (background/detached)
+docker-compose up -d
+
+# Stop server
+docker-compose down
+
+# View logs
+docker-compose logs -f vllm-server
+
+# Restart with different model
+MODEL=meta-llama/Llama-3.2-3B-Instruct docker-compose up
+```
+
+### What it does
+
+- Runs `vllm/vllm-openai:latest` with GPU support
+- Maps container port 8000 to host port defined in `.env` (default 8001)
+- Persists model weights in Docker volume `model-cache`
+- Exposes OpenAI-compatible API at `http://localhost:8001`
+
+### Alternative: PowerShell script for app.py
+
+To run `app.py` directly in a container:
+
+```powershell
+.\scripts\run-app.ps1 -Image demo-vllm -CacheVolume model-cache
+```
 
 Notes:
-- If PowerShell blocks scripts, allow local scripts once:
-  ```powershell
-  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-  ```
 - The named volume persists downloaded model weights between runs.
 - Ensure Docker Desktop is in Linux containers mode and GPU support is enabled.
-
 ## Testing the API (server mode)
 
-Once you've started the server with `run-server.ps1`, test the OpenAI-compatible endpoints:
+Once you've started the server with `docker-compose up`, test the OpenAI-compatible endpoints:
 
 ```bash
 # Chat completions
@@ -176,3 +199,4 @@ Update the call at the bottom of `app.py` to try different models.
 
 ## License
 This repo is provided as a simple demo. Follow licenses of vLLM, Transformers, and the chosen model.
+
